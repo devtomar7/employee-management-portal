@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Employee Dashboard</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI';
+}
+
+body {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    width: 95%;
+    max-width: 1000px;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(12px);
+    border-radius: 20px;
+    padding: 20px;
+    color: white;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+input {
+    padding: 10px;
+    margin: 5px;
+    border-radius: 10px;
+    border: none;
+}
+
+button {
+    padding: 10px;
+    margin: 5px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+}
+
+.add-btn { background: #00c853; color: white; }
+.update-btn { background: orange; color: white; }
+.edit-btn { background: blue; color: white; }
+.delete-btn { background: red; color: white; }
+
+.login-box {
+    text-align: center;
+}
+
+.hidden {
+    display: none;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="loginPage" class="container login-box">
+    <h1>🔐 Login</h1>
+    <input id="username" placeholder="Username"><br>
+    <input id="password" type="password" placeholder="Password"><br>
+    <button onclick="login()">Login</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="container hidden">
+    <h1>🚀 Employee Management</h1>
+
+    <button onclick="logout()">Logout</button>
+
+    <br><br>
+
+    <input id="name" placeholder="Name">
+    <input id="email" placeholder="Email">
+    <input id="department" placeholder="Department">
+    <input id="salary" placeholder="Salary">
+
+    <button class="add-btn" onclick="addEmployee()">Add</button>
+    <button class="update-btn" onclick="updateEmployee()">Update</button>
+
+    <table border="1" width="100%" style="margin-top:15px;">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Dept</th>
+                <th>Salary</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="table"></tbody>
+    </table>
+</div>
+
+<script>
+
+const API = "https://employee-management-portal-6bb4.onrender.com";
+let token = localStorage.getItem("token");
+let selectedId = null;
+
+// CHECK LOGIN
+if(token){
+    showDashboard();
+    fetchEmployees();
+}
+
+// LOGIN
+async function login(){
+    const res = await fetch(API + "/login", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            username: username.value,
+            password: password.value
+        })
+    });
+
+    const data = await res.json();
+
+    if(data.token){
+        localStorage.setItem("token", data.token);
+        token = data.token;
+        showDashboard();
+        fetchEmployees();
+    } else {
+        alert("Login failed");
+    }
+}
+
+// SHOW DASHBOARD
+function showDashboard(){
+    loginPage.classList.add("hidden");
+    dashboard.classList.remove("hidden");
+}
+
+// LOGOUT
+function logout(){
+    localStorage.removeItem("token");
+    location.reload();
+}
+
+// FETCH EMPLOYEES
+async function fetchEmployees(){
+    const res = await fetch(API + "/employees", {
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    });
+
+    const data = await res.json();
+    render(data);
+}
+
+// RENDER TABLE
+function render(data){
+    table.innerHTML = "";
+
+    data.forEach(emp=>{
+        table.innerHTML += `
+        <tr>
+            <td>${emp.id}</td>
+            <td>${emp.name}</td>
+            <td>${emp.email}</td>
+            <td>${emp.department}</td>
+            <td>${emp.salary}</td>
+            <td>
+                <button class="edit-btn" onclick="edit(${emp.id})">Edit</button>
+                <button class="delete-btn" onclick="removeEmp(${emp.id})">Delete</button>
+            </td>
+        </tr>`;
+    });
+}
+
+// ADD
+async function addEmployee(){
+    const emp = getData();
+
+    await fetch(API + "/employees", {
+        method: "POST",
+        headers: {
+            "Content-Type":"application/json",
+            "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify(emp)
+    });
+
+    fetchEmployees();
+}
+
+// DELETE
+async function removeEmp(id){
+    await fetch(API + "/employees/" + id, {
+        method: "DELETE",
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    });
+
+    fetchEmployees();
+}
+
+// EDIT
+function edit(id){
+    selectedId = id;
+}
+
+// UPDATE
+async function updateEmployee(){
+    const emp = getData();
+
+    await fetch(API + "/employees/" + selectedId, {
+        method: "PUT",
+        headers: {
+            "Content-Type":"application/json",
+            "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify(emp)
+    });
+
+    fetchEmployees();
+}
+
+// GET DATA
+function getData(){
+    return {
+        name: name.value,
+        email: email.value,
+        department: department.value,
+        salary: parseInt(salary.value)
+    };
+}
+
+</script>
+
+</body>
+</html>
